@@ -71,6 +71,7 @@ export const VideoStage: React.FC<VideoStageProps> = ({
   const isPresenting = !!screenStream;
   const isMainUserMuted = mainUser && mutedUserIds.has(mainUser.id);
   const isSelf = mainUser && mainUser.id === currentUser.id;
+  const isLocalSpeaking = speakingUserId === currentUser.id;
 
   return (
     <div className="relative w-full h-full overflow-hidden flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
@@ -101,7 +102,7 @@ export const VideoStage: React.FC<VideoStageProps> = ({
                 <div className="relative z-10 flex flex-col items-center gap-10 w-full px-6 transition-all duration-1000">
                     
                     {/* Avatar Circle with Glow */}
-                    <div className={`relative w-48 h-48 sm:w-64 sm:h-64 rounded-full flex items-center justify-center bg-zinc-950 border border-white/5 shadow-[0_0_80px_rgba(0,0,0,0.8)] overflow-hidden transition-all duration-700 ${speakingUserId === mainUser.id ? 'scale-110 shadow-[0_0_150px_rgba(99,102,241,0.25)] border-indigo-500/30' : ''}`}>
+                    <div className={`relative w-48 h-48 sm:w-64 sm:h-64 rounded-full flex items-center justify-center bg-zinc-950 border-2 shadow-[0_0_80px_rgba(0,0,0,0.8)] overflow-hidden transition-all duration-700 ${speakingUserId === mainUser.id ? 'scale-110 shadow-[0_0_100px_rgba(99,102,241,0.4)] border-indigo-500' : 'border-white/5'}`}>
                         {speakingUserId === mainUser.id && !isMainUserMuted && (
                             <div className="absolute inset-0 rounded-full bg-indigo-500/10 blur-3xl animate-pulse" />
                         )}
@@ -156,13 +157,13 @@ export const VideoStage: React.FC<VideoStageProps> = ({
 
       {/* --- LAYER 2: CAPTIONS (YouTube Style) --- */}
       {showCaptions && liveCaption && (
-          <div className="absolute bottom-36 left-0 right-0 z-30 flex justify-center px-4 pointer-events-none">
-             <div className="bg-zinc-950/85 backdrop-blur-sm border border-white/5 rounded-xl px-6 py-3 max-w-3xl text-center shadow-2xl animate-in slide-in-from-bottom-2 fade-in duration-200">
-                <p className="text-xl md:text-2xl text-white font-medium leading-relaxed drop-shadow-sm antialiased">
+          <div className="absolute bottom-28 left-0 right-0 z-30 flex justify-center px-4 pointer-events-none">
+             <div className="bg-zinc-950/90 backdrop-blur-md border border-white/5 rounded-lg px-6 py-4 max-w-4xl text-center shadow-[0_8px_32px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-4 fade-in duration-300">
+                <p className="text-lg md:text-xl text-white font-medium leading-relaxed drop-shadow-sm antialiased tracking-wide">
                    {liveCaption.translatedText || liveCaption.originalText}
                 </p>
                 {liveCaption.translatedText && (
-                    <p className="text-sm text-zinc-400 mt-1 font-normal opacity-80">
+                    <p className="text-sm text-zinc-400 mt-1.5 font-normal opacity-90">
                         {liveCaption.originalText}
                     </p>
                 )}
@@ -171,7 +172,7 @@ export const VideoStage: React.FC<VideoStageProps> = ({
       )}
 
       {/* --- LAYER 3: LOCAL USER (Draggable Glass Card) --- */}
-      <DraggableVideo className="bottom-32 right-6 sm:bottom-36 sm:right-8 w-28 h-28 sm:w-44 sm:h-44 bg-zinc-950 rounded-[2rem] overflow-hidden border-2 border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] z-40 group cursor-grab active:cursor-grabbing hover:border-white/20 transition-colors">
+      <DraggableVideo className={`bottom-32 right-6 sm:bottom-36 sm:right-8 w-28 h-28 sm:w-44 sm:h-44 bg-zinc-950 rounded-[2rem] overflow-hidden border-2 shadow-[0_30px_60px_rgba(0,0,0,0.8)] z-40 group cursor-grab active:cursor-grabbing transition-all duration-300 ${isLocalSpeaking ? 'border-indigo-500 shadow-[0_0_40px_rgba(99,102,241,0.5)]' : 'border-white/10 hover:border-white/20'}`}>
           <div className="w-full h-full relative bg-zinc-900">
               {localStream && isVideoEnabled ? (
                   <video

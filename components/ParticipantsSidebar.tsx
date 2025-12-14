@@ -10,6 +10,7 @@ interface ParticipantsSidebarProps {
   activeGroup: Group | undefined;
   mutedUserIds: Set<string>;
   onToggleMuteParticipant: (userId: string) => void;
+  isEmbedded?: boolean;
 }
 
 export const ParticipantsSidebar: React.FC<ParticipantsSidebarProps> = ({ 
@@ -19,22 +20,16 @@ export const ParticipantsSidebar: React.FC<ParticipantsSidebarProps> = ({
   currentUser,
   activeGroup,
   mutedUserIds,
-  onToggleMuteParticipant
+  onToggleMuteParticipant,
+  isEmbedded = false
 }) => {
   if (!isOpen) return null;
 
   // Combine currentUser + remote participants
   const allUsers = [currentUser, ...participants];
 
-  return (
-    <div className="absolute top-24 left-4 bottom-28 w-72 bg-zinc-900/95 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl z-40 flex flex-col overflow-hidden animate-in slide-in-from-left-4 fade-in duration-300">
-        <div className="p-5 border-b border-white/5 flex justify-between items-center bg-white/5">
-            <h3 className="font-medium text-white">Participants ({allUsers.length})</h3>
-            <button onClick={onClose} className="p-1 text-zinc-400 hover:text-white transition-colors">
-                <X size={18} />
-            </button>
-        </div>
-        
+  const content = (
+      <>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {allUsers.map((user) => {
                 const isMe = user.id === currentUser.id;
@@ -85,6 +80,22 @@ export const ParticipantsSidebar: React.FC<ParticipantsSidebarProps> = ({
                 Copy Invite Link
             </button>
         </div>
+      </>
+  );
+
+  if (isEmbedded) {
+      return <div className="flex flex-col h-full w-full">{content}</div>;
+  }
+
+  return (
+    <div className="absolute top-24 left-4 bottom-28 w-72 bg-zinc-900/95 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl z-40 flex flex-col overflow-hidden animate-in slide-in-from-left-4 fade-in duration-300">
+        <div className="p-5 border-b border-white/5 flex justify-between items-center bg-white/5">
+            <h3 className="font-medium text-white">Participants ({allUsers.length})</h3>
+            <button onClick={onClose} className="p-1 text-zinc-400 hover:text-white transition-colors">
+                <X size={18} />
+            </button>
+        </div>
+        {content}
     </div>
   );
 };

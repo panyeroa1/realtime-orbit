@@ -36,8 +36,10 @@ export interface LiveCaption {
 export default function App() {
   // Navigation State
   const [view, setView] = useState<'profile' | 'dashboard' | 'call' | 'waiting_room'>('profile');
-  const [showHistory, setShowHistory] = useState(false);
-  const [showParticipants, setShowParticipants] = useState(false);
+  
+  // Side Panel State (Zoom-style)
+  const [sideView, setSideView] = useState<'participants' | 'chat' | null>(null);
+
   const [googleAction, setGoogleAction] = useState<'calendar' | 'gmail' | 'drive' | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
@@ -74,7 +76,7 @@ export default function App() {
   
   // UI Logic
   const isIdle = useIdle(12000); // 12 seconds
-  const controlsVisible = !preferences.autoHideControls || !isIdle || showParticipants || showHistory || isSettingsOpen;
+  const controlsVisible = !preferences.autoHideControls || !isIdle || sideView !== null || isSettingsOpen;
 
   // Waiting Room / Admittance State
   const [pendingGuests, setPendingGuests] = useState<User[]>([]);
@@ -322,7 +324,7 @@ export default function App() {
     setActiveGroupId(null);
     setLiveCaption(null);
     setPendingGuests([]);
-    setShowParticipants(false);
+    setSideView(null);
     setIsRecording(false);
   };
 
@@ -571,122 +573,148 @@ export default function App() {
   if (!currentUser || !activeGroup) return null;
 
   return (
-    <div className={`flex flex-col h-screen overflow-hidden ambient-wave text-white ${preferences.darkMode ? 'dark' : ''}`} onClick={initAudio}>
+    <div className={`flex h-screen w-full overflow-hidden ambient-wave text-white ${preferences.darkMode ? 'dark' : ''}`} onClick={initAudio}>
       
-      {/* Pending Guest Toasts */}
-      {pendingGuests.length > 0 && (
-          <div className="absolute top-24 left-0 right-0 z-50 flex flex-col items-center gap-2 pointer-events-none">
-              {pendingGuests.map(guest => (
-                  <div key={guest.id} className="pointer-events-auto bg-zinc-800/90 backdrop-blur-md border border-white/10 p-3 rounded-2xl shadow-xl flex items-center gap-4 animate-in slide-in-from-top-2">
-                      <span className="text-sm font-medium">{guest.name} wants to join</span>
-                      <div className="flex gap-2">
-                          <button onClick={() => handleAdmitGuest(guest)} className="p-2 bg-green-500/20 text-green-400 rounded-full hover:bg-green-500/30"><Check size={16} /></button>
-                          <button onClick={() => handleDenyGuest(guest.id)} className="p-2 bg-red-500/20 text-red-400 rounded-full hover:bg-red-500/30"><X size={16} /></button>
-                      </div>
-                  </div>
-              ))}
-          </div>
-      )}
+      {/* Main Content Area (Video + Controls) */}
+      <div className="flex-1 flex flex-col relative min-w-0">
+        
+        {/* Pending Guest Toasts */}
+        {pendingGuests.length > 0 && (
+            <div className="absolute top-24 left-0 right-0 z-50 flex flex-col items-center gap-2 pointer-events-none">
+                {pendingGuests.map(guest => (
+                    <div key={guest.id} className="pointer-events-auto bg-zinc-800/90 backdrop-blur-md border border-white/10 p-3 rounded-2xl shadow-xl flex items-center gap-4 animate-in slide-in-from-top-2">
+                        <span className="text-sm font-medium">{guest.name} wants to join</span>
+                        <div className="flex gap-2">
+                            <button onClick={() => handleAdmitGuest(guest)} className="p-2 bg-green-500/20 text-green-400 rounded-full hover:bg-green-500/30"><Check size={16} /></button>
+                            <button onClick={() => handleDenyGuest(guest.id)} className="p-2 bg-red-500/20 text-red-400 rounded-full hover:bg-red-500/30"><X size={16} /></button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )}
 
-      {/* Top Bar (Participants, Language, Rec Status) */}
-      <TopBar 
-          isVisible={true} // Top bar handles its own idle visual state internally or we can pass !isIdle
-          currentUser={currentUser}
-          participants={participants}
-          onLanguageChange={(lang) => {
-              const updated = { ...currentUser, language: lang };
-              handleUpdateUser(updated); 
-          }}
+        {/* Top Bar (Participants, Language, Rec Status) */}
+        <TopBar 
+            isVisible={true} // Top bar handles its own idle visual state internally or we can pass !isIdle
+            currentUser={currentUser}
+            participants={participants}
+            onLanguageChange={(lang) => {
+                const updated = { ...currentUser, language: lang };
+                handleUpdateUser(updated); 
+            }}
+            isRecording={isRecording}
+            onToggleRecording={() => setIsRecording(!isRecording)}
+            pinnedUserId={pinnedUserId}
+            onPinUser={(id) => setPinnedUserId(id === pinnedUserId ? null : id)}
+            activeGroupId={activeGroupId}
+        />
+
+        {/* Stage */}
+        <div className="flex-1 relative overflow-hidden">
+          <VideoStage 
+            localStream={localStream}
+            screenStream={screenStream}
+            isVideoEnabled={isVideoOn}
+            isAudioEnabled={isMicOn}
+            currentUser={currentUser}
+            participants={participants}
+            speakingUserId={speakingUserId}
+            liveCaption={activeCaption} 
+            isDirectCall={isDirectCall}
+            showCaptions={showCaptions}
+            pinnedUserId={pinnedUserId}
+            mutedUserIds={mutedUserIds}
+            onToggleMuteParticipant={handleToggleMuteParticipant}
+          />
+        </div>
+
+        {/* Controls */}
+        <ControlBar 
+          isVisible={controlsVisible}
+          isMicOn={isMicOn}
+          isVideoOn={isVideoOn}
+          isTranslating={isTranslating}
+          onToggleMic={() => setIsMicOn(!isMicOn)}
+          onToggleVideo={() => setIsVideoOn(!isVideoOn)}
+          onEndCall={handleEndCall}
+          myLanguage={currentUser.language}
+          onMyLanguageChange={() => {}} 
+          localStream={localStream}
+          onToggleHistory={() => setSideView(v => v === 'chat' ? null : 'chat')}
+          isMyTranslatorMuted={isMyTranslatorMuted}
+          onToggleMyTranslatorMute={() => setIsMyTranslatorMuted(!isMyTranslatorMuted)}
+          isScreenSharing={!!screenStream}
+          onToggleScreenShare={handleToggleScreenShare}
+          showParticipants={sideView === 'participants'}
+          onToggleParticipants={() => setSideView(v => v === 'participants' ? null : 'participants')}
+          showCaptions={showCaptions}
+          onToggleCaptions={() => setShowCaptions(!showCaptions)}
+          isDirectVoice={isDirectVoice}
+          onToggleDirectVoice={() => setIsDirectVoice(!isDirectVoice)}
+          onGoogleAction={(action) => setGoogleAction(action)}
           isRecording={isRecording}
           onToggleRecording={() => setIsRecording(!isRecording)}
-          pinnedUserId={pinnedUserId}
-          onPinUser={(id) => setPinnedUserId(id === pinnedUserId ? null : id)}
-          activeGroupId={activeGroupId}
-      />
+          onOpenSettings={() => setIsSettingsOpen(true)}
+        />
 
-      {/* Sidebars & Modals */}
-      <ParticipantsSidebar 
-          isOpen={showParticipants} 
-          onClose={() => setShowParticipants(false)}
-          participants={participants}
-          currentUser={currentUser}
-          activeGroup={activeGroup}
-          mutedUserIds={mutedUserIds}
-          onToggleMuteParticipant={handleToggleMuteParticipant}
-      />
-      <GoogleIntegrations 
-          isOpen={!!googleAction}
-          onClose={() => setGoogleAction(null)}
-          action={googleAction}
-          activeGroup={activeGroup}
-      />
-      
-      {isSettingsOpen && (
-          <SettingsModal 
-              isOpen={isSettingsOpen} 
-              onClose={() => setIsSettingsOpen(false)}
-              currentUser={currentUser}
-              onUpdateUser={handleUpdateUser} 
-              preferences={preferences}
-              onUpdatePreferences={handleUpdatePreferences}
-          />
-      )}
-
-      {/* Stage */}
-      <div className="flex-1 flex overflow-hidden relative">
-        <VideoStage 
-          localStream={localStream}
-          screenStream={screenStream}
-          isVideoEnabled={isVideoOn}
-          isAudioEnabled={isMicOn}
-          currentUser={currentUser}
-          participants={participants}
-          speakingUserId={speakingUserId}
-          liveCaption={activeCaption} 
-          isDirectCall={isDirectCall}
-          showCaptions={showCaptions}
-          pinnedUserId={pinnedUserId}
-          mutedUserIds={mutedUserIds}
-          onToggleMuteParticipant={handleToggleMuteParticipant}
+        <GoogleIntegrations 
+            isOpen={!!googleAction}
+            onClose={() => setGoogleAction(null)}
+            action={googleAction}
+            activeGroup={activeGroup}
         />
         
-        {showHistory && (
-            <CallHistory 
-                group={activeGroup} 
-                currentUser={currentUser} 
-                onClose={() => setShowHistory(false)} 
+        {isSettingsOpen && (
+            <SettingsModal 
+                isOpen={isSettingsOpen} 
+                onClose={() => setIsSettingsOpen(false)}
+                currentUser={currentUser}
+                onUpdateUser={handleUpdateUser} 
+                preferences={preferences}
+                onUpdatePreferences={handleUpdatePreferences}
             />
         )}
       </div>
 
-      {/* Controls */}
-      <ControlBar 
-        isVisible={controlsVisible}
-        isMicOn={isMicOn}
-        isVideoOn={isVideoOn}
-        isTranslating={isTranslating}
-        onToggleMic={() => setIsMicOn(!isMicOn)}
-        onToggleVideo={() => setIsVideoOn(!isVideoOn)}
-        onEndCall={handleEndCall}
-        myLanguage={currentUser.language}
-        onMyLanguageChange={() => {}} 
-        localStream={localStream}
-        onToggleHistory={() => setShowHistory(!showHistory)}
-        isMyTranslatorMuted={isMyTranslatorMuted}
-        onToggleMyTranslatorMute={() => setIsMyTranslatorMuted(!isMyTranslatorMuted)}
-        isScreenSharing={!!screenStream}
-        onToggleScreenShare={handleToggleScreenShare}
-        showParticipants={showParticipants}
-        onToggleParticipants={() => setShowParticipants(!showParticipants)}
-        showCaptions={showCaptions}
-        onToggleCaptions={() => setShowCaptions(!showCaptions)}
-        isDirectVoice={isDirectVoice}
-        onToggleDirectVoice={() => setIsDirectVoice(!isDirectVoice)}
-        onGoogleAction={(action) => setGoogleAction(action)}
-        isRecording={isRecording}
-        onToggleRecording={() => setIsRecording(!isRecording)}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-      />
+      {/* Right Sidebar Panel (Zoom Style) */}
+      {sideView && (
+          <div className="w-[360px] bg-zinc-950/95 backdrop-blur-xl border-l border-white/10 flex flex-col shrink-0 z-40 transition-all duration-300 animate-in slide-in-from-right">
+              {/* Header */}
+              <div className="h-16 flex items-center justify-between px-6 border-b border-white/5 bg-white/5">
+                  <h3 className="font-medium text-white tracking-wide">
+                      {sideView === 'participants' ? `Participants (${participants.length + 1})` : 'Meeting Chat'}
+                  </h3>
+                  <button onClick={() => setSideView(null)} className="p-2 -mr-2 text-zinc-400 hover:text-white transition-colors hover:bg-white/10 rounded-full">
+                      <X size={18} />
+                  </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-hidden relative flex flex-col">
+                  {sideView === 'participants' && (
+                      <ParticipantsSidebar 
+                        isOpen={true} 
+                        isEmbedded={true}
+                        onClose={() => setSideView(null)}
+                        participants={participants}
+                        currentUser={currentUser}
+                        activeGroup={activeGroup}
+                        mutedUserIds={mutedUserIds}
+                        onToggleMuteParticipant={handleToggleMuteParticipant}
+                      />
+                  )}
+                  {sideView === 'chat' && (
+                      <CallHistory 
+                        group={activeGroup} 
+                        currentUser={currentUser} 
+                        onClose={() => setSideView(null)}
+                        isEmbedded={true}
+                      />
+                  )}
+              </div>
+          </div>
+      )}
+
     </div>
   );
 }
