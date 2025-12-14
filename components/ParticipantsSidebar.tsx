@@ -8,6 +8,8 @@ interface ParticipantsSidebarProps {
   participants: User[];
   currentUser: User;
   activeGroup: Group | undefined;
+  mutedUserIds: Set<string>;
+  onToggleMuteParticipant: (userId: string) => void;
 }
 
 export const ParticipantsSidebar: React.FC<ParticipantsSidebarProps> = ({ 
@@ -15,7 +17,9 @@ export const ParticipantsSidebar: React.FC<ParticipantsSidebarProps> = ({
   onClose, 
   participants, 
   currentUser,
-  activeGroup 
+  activeGroup,
+  mutedUserIds,
+  onToggleMuteParticipant
 }) => {
   if (!isOpen) return null;
 
@@ -32,27 +36,41 @@ export const ParticipantsSidebar: React.FC<ParticipantsSidebarProps> = ({
         </div>
         
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {allUsers.map((user) => (
-                <div key={user.id} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-xl transition-colors group">
-                    <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden border border-white/5">
-                        {user.avatar.startsWith('http') ? (
-                            <img src={user.avatar} className="w-full h-full object-cover" alt={user.name} />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center text-lg">{user.avatar}</div>
-                        )}
+            {allUsers.map((user) => {
+                const isMe = user.id === currentUser.id;
+                const isMuted = mutedUserIds.has(user.id);
+                
+                return (
+                    <div key={user.id} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-xl transition-colors group">
+                        <div className="w-10 h-10 rounded-full bg-zinc-800 overflow-hidden border border-white/5">
+                            {user.avatar.startsWith('http') ? (
+                                <img src={user.avatar} className="w-full h-full object-cover" alt={user.name} />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-lg">{user.avatar}</div>
+                            )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-zinc-200 truncate flex items-center gap-2">
+                                {user.name} 
+                                {isMe && <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded">You</span>}
+                            </p>
+                            <p className="text-xs text-zinc-500 truncate">{user.language} • {user.voice || 'Default'}</p>
+                        </div>
+                        <div>
+                             {!isMe && (
+                                 <button 
+                                    onClick={() => onToggleMuteParticipant(user.id)}
+                                    className={`p-2 rounded-full transition-colors ${isMuted ? 'text-red-400 bg-red-500/10' : 'text-zinc-500 hover:text-white hover:bg-white/10'}`}
+                                    title={isMuted ? "Unmute" : "Mute"}
+                                 >
+                                     {isMuted ? <MicOff size={14} /> : <Mic size={14} />}
+                                 </button>
+                             )}
+                             {isMe && <Mic size={14} className="text-zinc-600" />}
+                        </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-zinc-200 truncate flex items-center gap-2">
-                            {user.name} 
-                            {user.id === currentUser.id && <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded">You</span>}
-                        </p>
-                        <p className="text-xs text-zinc-500 truncate">{user.language} • {user.voice || 'Default'}</p>
-                    </div>
-                    <div>
-                         <Mic size={14} className="text-zinc-600" />
-                    </div>
-                </div>
-            ))}
+                );
+            })}
         </div>
         
         <div className="p-4 border-t border-white/5 bg-black/20">

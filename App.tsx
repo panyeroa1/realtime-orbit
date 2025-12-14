@@ -69,6 +69,8 @@ export default function App() {
   const [isDirectVoice, setIsDirectVoice] = useState(false); 
   const [isRecording, setIsRecording] = useState(false);
   const [pinnedUserId, setPinnedUserId] = useState<string | null>(null);
+  const [mutedUserIds, setMutedUserIds] = useState<Set<string>>(new Set());
+  const mutedUserIdsRef = useRef<Set<string>>(new Set());
   
   // UI Logic
   const isIdle = useIdle(12000); // 12 seconds
@@ -104,6 +106,17 @@ export default function App() {
       if (captionTimeoutRef.current) clearTimeout(captionTimeoutRef.current);
       setLiveCaption({ userId, originalText, translatedText, timestamp: Date.now() });
       captionTimeoutRef.current = setTimeout(() => setLiveCaption(null), 8000);
+  };
+
+  const handleToggleMuteParticipant = (userId: string) => {
+    const newSet = new Set(mutedUserIdsRef.current);
+    if (newSet.has(userId)) {
+        newSet.delete(userId);
+    } else {
+        newSet.add(userId);
+    }
+    mutedUserIdsRef.current = newSet;
+    setMutedUserIds(newSet);
   };
 
   // --- Storage Helper ---
@@ -398,6 +411,7 @@ export default function App() {
                 }
 
                 // Remote Messages
+                const isMuted = mutedUserIdsRef.current.has(newMsg.sender_id);
                 const sender = activeGroup?.members.find(m => m.id === newMsg.sender_id) || groups.find(g => g.id === activeGroupId)?.members.find(m => m.id === newMsg.sender_id);
                 const senderVoice = sender?.voice || 'Fenrir';
                 
@@ -409,7 +423,8 @@ export default function App() {
                     
                     if (result) {
                         showCaptionHandler(newMsg.sender_id, newMsg.text, result.translatedText);
-                        if (result.audioData && isSpeakerOn) {
+                        // Check muted state before playing audio
+                        if (result.audioData && isSpeakerOn && !isMuted) {
                             initAudio();
                             if (audioCtxRef.current) {
                                 const rawBytes = decodeBase64(result.audioData);
@@ -596,6 +611,8 @@ export default function App() {
           participants={participants}
           currentUser={currentUser}
           activeGroup={activeGroup}
+          mutedUserIds={mutedUserIds}
+          onToggleMuteParticipant={handleToggleMuteParticipant}
       />
       <GoogleIntegrations 
           isOpen={!!googleAction}
@@ -629,6 +646,8 @@ export default function App() {
           isDirectCall={isDirectCall}
           showCaptions={showCaptions}
           pinnedUserId={pinnedUserId}
+          mutedUserIds={mutedUserIds}
+          onToggleMuteParticipant={handleToggleMuteParticipant}
         />
         
         {showHistory && (

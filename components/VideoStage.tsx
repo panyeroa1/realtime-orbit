@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { MicOff, Monitor, Sparkles, Pin } from 'lucide-react';
+import { MicOff, Monitor, Sparkles, Pin, Mic } from 'lucide-react';
 import { User } from '../types';
 import { LiveCaption } from '../App';
 import { DraggableVideo } from './DraggableVideo';
@@ -16,6 +16,8 @@ interface VideoStageProps {
   isDirectCall?: boolean;
   showCaptions: boolean;
   pinnedUserId: string | null;
+  mutedUserIds: Set<string>;
+  onToggleMuteParticipant: (userId: string) => void;
 }
 
 export const VideoStage: React.FC<VideoStageProps> = ({ 
@@ -29,7 +31,9 @@ export const VideoStage: React.FC<VideoStageProps> = ({
   liveCaption,
   isDirectCall = false,
   showCaptions,
-  pinnedUserId
+  pinnedUserId,
+  mutedUserIds,
+  onToggleMuteParticipant
 }) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const screenVideoRef = useRef<HTMLVideoElement>(null);
@@ -58,9 +62,15 @@ export const VideoStage: React.FC<VideoStageProps> = ({
   if (pinnedUserId) {
       const pinned = participants.find(p => p.id === pinnedUserId);
       if (pinned) mainUser = pinned;
+      else if (pinnedUserId === currentUser.id) {
+          // If local user is pinned, display them as main user
+          mainUser = currentUser;
+      }
   }
 
   const isPresenting = !!screenStream;
+  const isMainUserMuted = mainUser && mutedUserIds.has(mainUser.id);
+  const isSelf = mainUser && mainUser.id === currentUser.id;
 
   return (
     <div className="relative w-full h-full overflow-hidden flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
@@ -87,17 +97,38 @@ export const VideoStage: React.FC<VideoStageProps> = ({
           </div>
       ) : (
           mainUser ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center group/stage">
                 <div className="relative z-10 flex flex-col items-center gap-10 w-full px-6 transition-all duration-1000">
                     
                     {/* Avatar Circle with Glow */}
                     <div className={`relative w-48 h-48 sm:w-64 sm:h-64 rounded-full flex items-center justify-center bg-zinc-950 border border-white/5 shadow-[0_0_80px_rgba(0,0,0,0.8)] overflow-hidden transition-all duration-700 ${speakingUserId === mainUser.id ? 'scale-110 shadow-[0_0_150px_rgba(99,102,241,0.25)] border-indigo-500/30' : ''}`}>
-                        {speakingUserId === mainUser.id && (
+                        {speakingUserId === mainUser.id && !isMainUserMuted && (
                             <div className="absolute inset-0 rounded-full bg-indigo-500/10 blur-3xl animate-pulse" />
                         )}
                         <div className="relative z-10 w-full h-full flex items-center justify-center">
                             {renderAvatar(mainUser.avatar, "text-8xl")}
                         </div>
+                        
+                        {/* Hover Overlay Mute Button */}
+                        {!isSelf && (
+                            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm opacity-0 group-hover/stage:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleMuteParticipant(mainUser.id);
+                                    }}
+                                    className={`p-4 rounded-full transition-transform transform active:scale-95 ${isMainUserMuted ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/10 text-white border border-white/20 hover:bg-white/20'}`}
+                                >
+                                    {isMainUserMuted ? <MicOff size={32} /> : <Mic size={32} />}
+                                </button>
+                            </div>
+                        )}
+                        {/* Status Icon if muted (visible without hover) */}
+                        {isMainUserMuted && (
+                            <div className="absolute bottom-4 right-4 p-2 bg-red-500 text-white rounded-full shadow-lg border border-red-400 z-20">
+                                <MicOff size={16} />
+                            </div>
+                        )}
                     </div>
 
                     <div className="text-center relative">
