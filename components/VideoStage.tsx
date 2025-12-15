@@ -3,6 +3,7 @@ import { MicOff, Monitor, Sparkles, Pin, Mic } from 'lucide-react';
 import { User } from '../types';
 import { LiveCaption } from '../App';
 import { DraggableVideo } from './DraggableVideo';
+import { AudioVisualizer } from './AudioVisualizer';
 
 interface VideoStageProps {
   localStream: MediaStream | null;
@@ -185,6 +186,13 @@ export const VideoStage: React.FC<VideoStageProps> = ({
               ) : (
                   <div className="w-full h-full flex items-center justify-center bg-zinc-900 text-zinc-700">
                       {renderAvatar(currentUser.avatar, "text-2xl")}
+                  </div>
+              )}
+              
+              {/* Visualizer Overlay */}
+              {isAudioEnabled && localStream && (
+                  <div className="absolute bottom-2 left-0 right-0 flex justify-center z-30 opacity-80 pointer-events-none">
+                      <AudioVisualizer stream={localStream} isActive={true} color={isLocalSpeaking ? "#818cf8" : "#a1a1aa"} />
                   </div>
               )}
           </div>

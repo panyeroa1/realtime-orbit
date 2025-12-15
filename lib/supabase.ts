@@ -1,12 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
+// Using credentials provided by the user
+const supabaseUrl = process.env.SUPABASE_URL || 'https://ipuptwbhepvbpigtvjya.supabase.co';
+const supabaseKey = process.env.SUPABASE_ANON_KEY || 'sb_publishable_X55lv04o-sD9IuOzJUrrFQ_cGZ9qMEB';
 
 if (!supabaseUrl || !supabaseKey) {
-  throw new Error(
-    'Missing Supabase env vars. Set SUPABASE_URL and SUPABASE_ANON_KEY in your .env'
-  );
+  console.warn("Supabase credentials missing. Please check your configuration.");
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
