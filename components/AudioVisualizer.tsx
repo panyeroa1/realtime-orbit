@@ -4,12 +4,14 @@ interface AudioVisualizerProps {
   stream: MediaStream | null;
   isActive: boolean;
   color?: string;
+  className?: string;
 }
 
 export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ 
   stream, 
   isActive, 
-  color = '#6366f1' // Indigo-500 default
+  color = '#6366f1', // Indigo-500 default
+  className = "w-24 h-8"
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -110,7 +112,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
       ref={canvasRef} 
       width={100} 
       height={30} 
-      className="w-24 h-8"
+      className={className}
     />
   );
 };

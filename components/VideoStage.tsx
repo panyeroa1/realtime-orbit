@@ -191,8 +191,13 @@ export const VideoStage: React.FC<VideoStageProps> = ({
               
               {/* Visualizer Overlay */}
               {isAudioEnabled && localStream && (
-                  <div className="absolute bottom-2 left-0 right-0 flex justify-center z-30 opacity-80 pointer-events-none">
-                      <AudioVisualizer stream={localStream} isActive={true} color={isLocalSpeaking ? "#818cf8" : "#a1a1aa"} />
+                  <div className="absolute bottom-2 left-0 right-0 flex justify-center z-30 opacity-80 pointer-events-none px-4 pb-2">
+                      <AudioVisualizer 
+                          stream={localStream} 
+                          isActive={true} 
+                          color={isLocalSpeaking ? "#818cf8" : "#a1a1aa"} 
+                          className="w-20 h-6 sm:w-28 sm:h-8"
+                      />
                   </div>
               )}
           </div>
